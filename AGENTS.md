@@ -28,6 +28,7 @@ src/                 Agent-tool library (compiled to dist/)
   model-output.ts    buildModelOutput() — formats the result string the LLM sees
   query-resolver.ts  resolveQueryData() — maps a query_id result to {t,series,value}[]
   deckgen.ts         spawns bin/deckgen and parses its JSON report
+  mcp.ts             MCP server — exposes execute() as the generate_presentation tool
   index.ts           re-exports the public API
 renderer/            Bundled deckgen renderer (run via tsx, never compiled to dist/)
   cli.ts             CLI entrypoint: validate-spec / render / verify / check
@@ -38,6 +39,7 @@ renderer/            Bundled deckgen renderer (run via tsx, never compiled to di
   theme.ts           neutral color/font theme
   layouts.ts         slide layout geometry
 bin/deckgen          bash launcher: node --import tsx/esm renderer/cli.ts
+bin/pptx-agent-mcp   launcher for the MCP server (compiled dist/mcp.js, tsx fallback)
 examples/demo.ts     runnable end-to-end example (exercises all 8 slide types)
 tests/*.test.ts      node:test suites, run via tsx
 scripts/screenshots.sh  regenerate README slide previews (LibreOffice + poppler)
@@ -72,6 +74,13 @@ done — this is exactly what CI runs (`.github/workflows/ci.yml`, Node 18/20/22
   `comparison_chart` slide type or any external data fetching.
 - No system binaries: zip reading uses `fflate`, not a shelled-out `unzip`. Keep it
   pure-JS and cross-platform.
+- **MCP server** (`src/mcp.ts`, official `@modelcontextprotocol/sdk`): one tool,
+  `generate_presentation`, wrapping `execute()`. Transports: stdio (default) and Streamable
+  HTTP (`MCP_TRANSPORT=http`, endpoint `/mcp`). `createMcpServer()` is exported as a factory
+  so `tests/mcp.test.ts` can drive it in-process via `InMemoryTransport` (no spawning).
+  In MCP mode there is no HTTP `download_url`: it returns a local file path + `resource_link`
+  (output dir = `PPTX_OUTPUT_DIR`). Keep it on the official SDK — it stays on Node ≥18 and
+  one dependency; avoid pulling in heavier server frameworks.
 
 ## Gotchas
 

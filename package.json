@@ -50,7 +50,7 @@
     "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
-    "fastmcp": "^4.3.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "fflate": "^0.8.3",
     "pptxgenjs": "^3.12.0",
     "tsx": "^4.20.0",

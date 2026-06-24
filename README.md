@@ -94,10 +94,10 @@ const tools = [{
 ## Use via MCP
 
 The tool also ships as a [Model Context Protocol](https://modelcontextprotocol.io) server
-(built on [`fastmcp`](https://github.com/punkpeye/fastmcp)), so any MCP client (Claude
-Desktop, Claude Code, Cursor, …) can generate presentations with no integration code. It
-exposes one tool, `generate_presentation`, whose input is the same `InputSchema` (offered
-to the client as JSON Schema).
+(built on the official [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk)),
+so any MCP client (Claude Desktop, Claude Code, Cursor, …) can generate presentations with
+no integration code. It exposes one tool, `generate_presentation`, whose input is the same
+`InputSchema` (offered to the client as JSON Schema).
 
 ```bash
 npm install && npm run build   # builds dist/ (the server)
@@ -130,6 +130,10 @@ MCP_TRANSPORT=http MCP_PORT=8080 MCP_HOST=0.0.0.0 node dist/mcp.js
 ```
 
 Then point an HTTP-capable MCP client at `http://<host>:8080/mcp`.
+
+> **Security:** the HTTP transport has **no authentication**. Binding to `0.0.0.0` exposes
+> presentation generation to anyone who can reach the port. Only do so on a trusted network,
+> or put it behind a reverse proxy / gateway that handles auth and TLS.
 
 ### File delivery
 
