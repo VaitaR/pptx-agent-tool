@@ -227,6 +227,7 @@ Directional, not committal — order and scope may change. Contributions and ide
 via [issues](https://github.com/VaitaR/pptx-agent-tool/issues).
 
 **Near-term**
+- **MCP server** — expose `execute()` as a [Model Context Protocol](https://modelcontextprotocol.io) tool (`generate_presentation`) so any MCP client (Claude Desktop, Claude Code, Cursor, …) can use it without writing integration code. Over stdio it would return a local file path / MCP resource instead of the HTTP `download_url` — an alternative front-end over the same core, not a replacement for the web mode.
 - **Theming API** — pass a custom palette / font / logo to `execute()` instead of the fixed neutral theme.
 - **More chart types** — pie / donut, area, and combo charts beyond the current bar / line / horizontal_bar.
 - **Image & media slides** — embed images alongside text and charts.
