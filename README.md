@@ -221,6 +221,30 @@ All five rendered from the demo deck:
 After every successful generation the tool returns `deck_spec` — the fully resolved spec.
 Pass it back to the LLM with: "modify only the relevant slides and call generate_presentation again."
 
+## Roadmap
+
+Directional, not committal — order and scope may change. Contributions and ideas welcome
+via [issues](https://github.com/VaitaR/pptx-agent-tool/issues).
+
+**Near-term**
+- **Theming API** — pass a custom palette / font / logo to `execute()` instead of the fixed neutral theme.
+- **More chart types** — pie / donut, area, and combo charts beyond the current bar / line / horizontal_bar.
+- **Image & media slides** — embed images alongside text and charts.
+- Fix the stacked-composition KPI total (currently sums shares to a misleading "TOTAL").
+
+**Later**
+- **JSON Schema export** — a ready-made schema for LLM providers that don't speak Zod.
+- **Speaker notes** — distinct from `altText`.
+- **Optional PDF / PNG export helper** — wrap the LibreOffice pipeline used for the README previews.
+- **Master / template slides**.
+
+## Non-goals
+
+To keep the scope tight, this project intentionally does **not** aim to be:
+- a database connector — chart data arrives inline or via `query_id`, resolved by the host app;
+- a hosted service or SaaS;
+- a WYSIWYG slide editor.
+
 ## Files
 
 ```
