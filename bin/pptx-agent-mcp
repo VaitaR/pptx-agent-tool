@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Prefer the compiled server (shipped in published installs via `prepare`);
+# fall back to running the TypeScript source with tsx for local clones.
+if [ -f "$ROOT/dist/mcp.js" ]; then
+  exec node "$ROOT/dist/mcp.js" "$@"
+else
+  exec node --import tsx/esm "$ROOT/src/mcp.ts" "$@"
+fi

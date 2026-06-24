@@ -91,11 +91,73 @@ const tools = [{
 }];
 ```
 
+## Use via MCP
+
+The tool also ships as a [Model Context Protocol](https://modelcontextprotocol.io) server
+(built on the official [`@modelcontextprotocol/sdk`](https://github.com/modelcontextprotocol/typescript-sdk)),
+so any MCP client (Claude Desktop, Claude Code, Cursor, …) can generate presentations with
+no integration code. It exposes one tool, `generate_presentation`, whose input is the same
+`InputSchema` (offered to the client as JSON Schema).
+
+```bash
+npm install && npm run build   # builds dist/ (the server)
+```
+
+### Local (stdio)
+
+Register it with your MCP client — e.g. in Claude Desktop's `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "pptx-agent-tool": {
+      "command": "node",
+      "args": ["/absolute/path/to/pptx-agent-tool/dist/mcp.js"],
+      "env": { "PPTX_OUTPUT_DIR": "/absolute/path/for/generated/decks" }
+    }
+  }
+}
+```
+
+### Remote (Streamable HTTP)
+
+For a hosted / shared deployment, run the same server over Streamable HTTP (the current
+remote transport; it supersedes the legacy standalone SSE transport):
+
+```bash
+MCP_TRANSPORT=http MCP_PORT=8080 MCP_HOST=0.0.0.0 node dist/mcp.js
+# serves the MCP endpoint at http://<host>:8080/mcp
+```
+
+Then point an HTTP-capable MCP client at `http://<host>:8080/mcp`.
+
+> **Security:** the HTTP transport validates the `Origin` header (DNS-rebinding protection):
+> browser origins other than localhost are rejected — add trusted ones via
+> `MCP_ALLOWED_ORIGINS`. It has **no authentication**, though, so binding to `0.0.0.0`
+> exposes presentation generation to anyone who can reach the port. Only do so on a trusted
+> network, or put it behind a reverse proxy / gateway that handles auth and TLS.
+
+### File delivery
+
+There is no HTTP `download_url` in MCP mode, so the tool returns the saved `.pptx` as a
+**local file path** plus a `resource_link`. Files are written to `PPTX_OUTPUT_DIR`
+(default: a `pptx-agent-tool` folder under the OS temp dir). For a truly remote server,
+the file lives on the server host — pair it with the web mode (`registerPresentationRoutes`)
+if clients need to download it over HTTP.
+
+The `bin/pptx-agent-mcp` launcher runs the compiled server when present and falls back to
+the TypeScript source via `tsx` for local clones.
+
 ## Environment
 
 | Variable | Required | Description |
 |---|---|---|
 | `DECKGEN_BIN` | No | Override the bundled renderer with a path to a custom `deckgen` CLI binary. Defaults to the bundled one. |
+| `PPTX_OUTPUT_DIR` | No | (MCP server) Directory for generated `.pptx` files. Defaults to `<tmp>/pptx-agent-tool`. |
+| `MCP_TRANSPORT` | No | (MCP server) `http` to serve Streamable HTTP; anything else uses stdio (default). |
+| `MCP_PORT` / `PORT` | No | (MCP server, HTTP) Port to listen on. Default `8080`. |
+| `MCP_HOST` | No | (MCP server, HTTP) Bind address. Default localhost; set `0.0.0.0` for remote access. |
+| `MCP_ALLOWED_ORIGINS` | No | (MCP server, HTTP) Comma-separated extra `Origin` values to allow. localhost is always allowed; other browser origins are rejected. |
 
 ## Slide types
 
