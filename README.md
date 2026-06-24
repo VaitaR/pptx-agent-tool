@@ -91,11 +91,44 @@ const tools = [{
 }];
 ```
 
+## Use via MCP
+
+The tool also ships as a [Model Context Protocol](https://modelcontextprotocol.io) server,
+so any MCP client (Claude Desktop, Claude Code, Cursor, …) can generate presentations with
+no integration code. It exposes one tool, `generate_presentation`, whose input is the same
+`InputSchema` (offered to the client as JSON Schema).
+
+```bash
+npm install && npm run build   # builds dist/ (the server)
+```
+
+Register it with your MCP client — e.g. in Claude Desktop's `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "pptx-agent-tool": {
+      "command": "node",
+      "args": ["/absolute/path/to/pptx-agent-tool/dist/mcp.js"],
+      "env": { "PPTX_OUTPUT_DIR": "/absolute/path/for/generated/decks" }
+    }
+  }
+}
+```
+
+Over stdio there is no HTTP `download_url`, so the tool returns the saved `.pptx` as a
+**local file path** plus a `resource_link`. Files are written to `PPTX_OUTPUT_DIR`
+(default: a `pptx-agent-tool` folder under the OS temp dir).
+
+The `bin/pptx-agent-mcp` launcher runs the compiled server when present and falls back to
+the TypeScript source via `tsx` for local clones.
+
 ## Environment
 
 | Variable | Required | Description |
 |---|---|---|
 | `DECKGEN_BIN` | No | Override the bundled renderer with a path to a custom `deckgen` CLI binary. Defaults to the bundled one. |
+| `PPTX_OUTPUT_DIR` | No | (MCP server) Directory for generated `.pptx` files. Defaults to `<tmp>/pptx-agent-tool`. |
 
 ## Slide types
 
