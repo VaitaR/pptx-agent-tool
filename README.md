@@ -7,11 +7,35 @@ The PPTX renderer (`deckgen`) is **bundled** in this package — no external ser
 separate setup required. It builds slides from editable PowerPoint shapes (no native
 chart objects, no full-slide rasters) using [`pptxgenjs`](https://github.com/gitbrent/PptxGenJS).
 
+## Example output
+
+Real slides from `npm run demo` (all 8 slide types + 5 chart patterns, neutral theme):
+
+| | |
+|---|---|
+| ![How a deck is built](docs/images/slide-05.png) | ![Line trend chart](docs/images/slide-09.png) |
+| ![Ranked bar chart](docs/images/slide-11.png) | ![Grouped bar chart](docs/images/slide-13.png) |
+| ![KPI slide](docs/images/slide-04.png) | ![Table slide](docs/images/slide-07.png) |
+
+<sub>Regenerate with [`scripts/screenshots.sh`](scripts/screenshots.sh) (requires LibreOffice + poppler — only for rendering previews, not for the library itself).</sub>
+
 ## How it works
 
+```mermaid
+flowchart LR
+    LLM["🤖 LLM<br/>builds deck spec<br/>(JSON)"] --> EX["execute()<br/>validate + resolve"]
+    QR[("query results<br/>(optional)")] -. "query_id" .-> EX
+    EX --> RND["deckgen renderer<br/>(pptxgenjs)"]
+    RND --> VER["verifier<br/>quality checks"]
+    VER --> FILE["📄 .pptx<br/>saved to disk"]
+    FILE --> OUT["download_url +<br/>deck_spec returned"]
+    OUT -. "revision loop" .-> LLM
 ```
-LLM builds deck spec → execute() → bundled deckgen renderer → PPTX saved to disk → download URL returned
-```
+
+1. The **LLM** emits a deck spec matching `InputSchema` (a list of typed slides).
+2. **`execute()`** validates the spec, resolves any `query_id` references into chart data, and invokes the bundled renderer.
+3. **`deckgen`** renders editable PowerPoint shapes (no rasterized slides, no native chart objects), then the **verifier** runs quality checks (units, periods, alt-text, contrast).
+4. The saved `.pptx` plus a `download_url` and the fully-resolved `deck_spec` are returned. The spec feeds the **revision loop** — the LLM edits only the changed slides and calls again.
 
 ## Install
 
@@ -86,15 +110,111 @@ const tools = [{
 | `kpi` | 1-4 big number cards |
 | `table` | Data table with columns/rows |
 
+## Slide examples
+
+Each slide is a typed object inside `slides[]`. The renderer turns these into editable shapes.
+
+**`title`** — cover slide
+```json
+{ "type": "title", "title": "Q1 2026 Business Review", "subtitle": "Revenue, growth, and key metrics" }
+```
+
+**`section`** — divider
+```json
+{ "type": "section", "title": "Financial Performance", "body": "Part 1 of 3" }
+```
+
+**`insight`** — large one-idea callout
+```json
+{ "type": "insight", "title": "The headline", "callout": "Revenue doubled in three months", "body": "Driven mostly by new enterprise accounts." }
+```
+
+**`process`** — 2–5 connected step cards
+```json
+{
+  "type": "process",
+  "title": "How onboarding works",
+  "steps": [
+    { "label": "01", "title": "Sign up", "body": "Email + workspace name" },
+    { "label": "02", "title": "Connect data", "body": "OAuth or API key" },
+    { "label": "03", "title": "Generate", "body": "First deck in seconds" }
+  ]
+}
+```
+
+**`content`** — text / markdown (`**bold**`, `- bullets`)
+```json
+{ "type": "content", "title": "Summary", "body": "- Strong Q1\n- **Revenue up 110%**\n- Churn flat" }
+```
+
+**`data_chart`** — chart with pattern + intent (inline `data` OR `query_id`)
+```json
+{
+  "type": "data_chart",
+  "title": "Revenue grew steadily",
+  "chart": "bar",
+  "pattern": "column_trend",
+  "intent": "trend_recovery",
+  "valueFormat": "currency",
+  "unit": "USD",
+  "period": "Jan–Mar 2026",
+  "altText": "Monthly revenue rising from $1k to $2k over three months",
+  "takeaway": "Revenue doubled across the quarter.",
+  "data": [
+    { "t": "2026-01", "value": 1000 },
+    { "t": "2026-02", "value": 1500 },
+    { "t": "2026-03", "value": 2000 }
+  ]
+}
+```
+
+**`kpi`** — 1–4 big number cards
+```json
+{
+  "type": "kpi",
+  "title": "At a glance",
+  "items": [
+    { "label": "Total Revenue", "value": "$2.5M", "subtitle": "+110% QoQ" },
+    { "label": "Active Users", "value": "48k", "subtitle": "+12% MoM" }
+  ]
+}
+```
+
+**`table`** — columns + rows
+```json
+{
+  "type": "table",
+  "title": "Top markets",
+  "columns": ["Country", "Revenue", "Share"],
+  "rows": [["US", "$1.2M", "48%"], ["DE", "$0.6M", "24%"], ["UK", "$0.4M", "16%"]],
+  "source": "Internal data"
+}
+```
+
+See [`examples/demo.ts`](examples/demo.ts) for a full runnable deck.
+
 ## data_chart patterns
 
-| Pattern | Chart | Use |
+`data_chart` supports five patterns. Set `pattern` and `intent` explicitly — the verifier
+warns if the data shape doesn't match the declared pattern.
+
+| Pattern | Chart | Use | Typical intent |
+|---|---|---|---|
+| `line_trend` | line | Continuous trend over time | `trend_recovery` / `trend_decline` |
+| `column_trend` | bar | Discrete period volumes | `trend_recovery` / `variance_watch` |
+| `ranked_bar` | horizontal_bar | Category rankings | `rank_leader` / `mix_concentration` |
+| `stacked_composition` | bar (multi-series) | Composition over time | `composition_shift` |
+| `grouped_bar` | bar (multi-series) | Side-by-side comparison | `period_comparison` |
+
+All five rendered from the demo deck:
+
+| line_trend | column_trend | ranked_bar |
 |---|---|---|
-| `line_trend` | line | Continuous trend over time |
-| `column_trend` | bar | Discrete period volumes |
-| `ranked_bar` | horizontal_bar | Category rankings |
-| `stacked_composition` | bar | Composition over time |
-| `grouped_bar` | bar | Side-by-side series comparison |
+| ![line_trend](docs/images/slide-09.png) | ![column_trend](docs/images/slide-10.png) | ![ranked_bar](docs/images/slide-11.png) |
+
+| stacked_composition | grouped_bar |
+|---|---|
+| ![stacked_composition](docs/images/slide-12.png) | ![grouped_bar](docs/images/slide-13.png) |
 
 ## Revision workflow
 
