@@ -131,9 +131,11 @@ MCP_TRANSPORT=http MCP_PORT=8080 MCP_HOST=0.0.0.0 node dist/mcp.js
 
 Then point an HTTP-capable MCP client at `http://<host>:8080/mcp`.
 
-> **Security:** the HTTP transport has **no authentication**. Binding to `0.0.0.0` exposes
-> presentation generation to anyone who can reach the port. Only do so on a trusted network,
-> or put it behind a reverse proxy / gateway that handles auth and TLS.
+> **Security:** the HTTP transport validates the `Origin` header (DNS-rebinding protection):
+> browser origins other than localhost are rejected — add trusted ones via
+> `MCP_ALLOWED_ORIGINS`. It has **no authentication**, though, so binding to `0.0.0.0`
+> exposes presentation generation to anyone who can reach the port. Only do so on a trusted
+> network, or put it behind a reverse proxy / gateway that handles auth and TLS.
 
 ### File delivery
 
@@ -155,6 +157,7 @@ the TypeScript source via `tsx` for local clones.
 | `MCP_TRANSPORT` | No | (MCP server) `http` to serve Streamable HTTP; anything else uses stdio (default). |
 | `MCP_PORT` / `PORT` | No | (MCP server, HTTP) Port to listen on. Default `8080`. |
 | `MCP_HOST` | No | (MCP server, HTTP) Bind address. Default localhost; set `0.0.0.0` for remote access. |
+| `MCP_ALLOWED_ORIGINS` | No | (MCP server, HTTP) Comma-separated extra `Origin` values to allow. localhost is always allowed; other browser origins are rejected. |
 
 ## Slide types
 

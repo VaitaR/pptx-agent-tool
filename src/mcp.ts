@@ -26,6 +26,20 @@ const DEFAULT_OUTPUT_DIR = process.env.PPTX_OUTPUT_DIR ?? path.join(os.tmpdir(),
 /** JSON Schema for the tool definition, generated from the Zod input schema (zod v4). */
 const inputJsonSchema = z.toJSONSchema(InputSchema) as Record<string, unknown>;
 
+/** JSON Schema describing the structured result returned alongside the human-readable text. */
+const outputJsonSchema: Record<string, unknown> = {
+	type: 'object',
+	properties: {
+		success: { type: 'boolean' },
+		filePath: { type: 'string', description: 'Absolute path to the generated .pptx on the server host' },
+		filename: { type: 'string' },
+		slide_count: { type: 'number' },
+		quality_warnings: { type: 'array', items: { type: 'string' } },
+	},
+	required: ['success'],
+	additionalProperties: false,
+};
+
 /**
  * Build a fresh MCP server with the generate_presentation tool. A new instance is created
  * per stdio process and per Streamable HTTP session (one transport binds to one server).
@@ -35,7 +49,22 @@ export function createMcpServer(opts: { outputDir?: string } = {}): Server {
 	const server = new Server({ name: 'pptx-agent-tool', version: '0.1.0' }, { capabilities: { tools: {} } });
 
 	server.setRequestHandler(ListToolsRequestSchema, async () => ({
-		tools: [{ name: TOOL_NAME, description: TOOL_DESCRIPTION, inputSchema: inputJsonSchema }],
+		tools: [
+			{
+				name: TOOL_NAME,
+				title: 'Generate PowerPoint presentation',
+				description: TOOL_DESCRIPTION,
+				inputSchema: inputJsonSchema,
+				outputSchema: outputJsonSchema,
+				annotations: {
+					title: 'Generate PowerPoint presentation',
+					readOnlyHint: false, // writes a .pptx file
+					destructiveHint: false, // only creates new files, never overwrites
+					idempotentHint: false, // each call produces a new deck
+					openWorldHint: false, // operates only on provided input, no external systems
+				},
+			},
+		],
 	}));
 
 	server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
@@ -77,7 +106,16 @@ export function createMcpServer(opts: { outputDir?: string } = {}): Server {
 				mimeType: PPTX_MIME,
 			});
 		}
-		return { content };
+
+		const structuredContent: Record<string, unknown> = {
+			success: true,
+			slide_count: result.slide_count,
+			quality_warnings: result.quality_warnings ?? [],
+		};
+		if (filePath) structuredContent.filePath = filePath;
+		if (result.filename) structuredContent.filename = result.filename;
+
+		return { content, structuredContent };
 	});
 
 	return server;
@@ -105,12 +143,36 @@ function sendJsonRpcError(res: http.ServerResponse, status: number, message: str
 	res.end(JSON.stringify({ jsonrpc: '2.0', error: { code: -32000, message }, id: null }));
 }
 
+/**
+ * DNS-rebinding protection: browser clients send an Origin header, so reject any Origin
+ * not on the allowlist. Non-browser clients (no Origin) are allowed. Configure extra
+ * origins with MCP_ALLOWED_ORIGINS (comma-separated); localhost is always permitted.
+ */
+function isOriginAllowed(origin: string | undefined, extra: string[]): boolean {
+	if (!origin) return true;
+	if (extra.includes(origin)) return true;
+	try {
+		const hostname = new URL(origin).hostname;
+		return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+	} catch {
+		return false;
+	}
+}
+
 /** Minimal Streamable HTTP server (stateful sessions) over Node's built-in http. */
 async function startHttp(outputDir: string, port: number, host?: string): Promise<void> {
 	const transports = new Map<string, StreamableHTTPServerTransport>();
+	const allowedOrigins = (process.env.MCP_ALLOWED_ORIGINS ?? '')
+		.split(',')
+		.map((s) => s.trim())
+		.filter(Boolean);
 
 	const httpServer = http.createServer(async (req, res) => {
 		try {
+			if (!isOriginAllowed(req.headers.origin, allowedOrigins)) {
+				sendJsonRpcError(res, 403, 'Forbidden: origin not allowed');
+				return;
+			}
 			const url = new URL(req.url ?? '/', 'http://localhost');
 			if (url.pathname !== '/mcp') {
 				res.writeHead(404).end();

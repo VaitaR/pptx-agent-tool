@@ -20,11 +20,11 @@ test('MCP server lists generate_presentation and generates a deck', async () => 
 	await client.connect(clientTransport);
 
 	const tools = await client.listTools();
-	assert.ok(
-		tools.tools.some((t) => t.name === 'generate_presentation'),
-		'generate_presentation should be advertised',
-	);
-	assert.ok(tools.tools[0]?.inputSchema?.properties, 'tool should expose a JSON Schema with properties');
+	const tool = tools.tools.find((t) => t.name === 'generate_presentation');
+	assert.ok(tool, 'generate_presentation should be advertised');
+	assert.ok(tool.inputSchema?.properties, 'tool should expose a JSON Schema with properties');
+	assert.ok(tool.outputSchema?.properties, 'tool should expose an outputSchema');
+	assert.equal(tool.annotations?.readOnlyHint, false, 'tool should declare behavior annotations');
 
 	const res = await client.callTool({
 		name: 'generate_presentation',
@@ -41,6 +41,10 @@ test('MCP server lists generate_presentation and generates a deck', async () => 
 	const content = res.content as Array<{ type: string; uri?: string }>;
 	const link = content.find((c) => c.type === 'resource_link');
 	assert.ok(link?.uri?.startsWith('file://'), 'should return a resource_link to the generated .pptx');
+
+	const structured = res.structuredContent as { success?: boolean; filePath?: string } | undefined;
+	assert.equal(structured?.success, true, 'should return structuredContent');
+	assert.ok(structured?.filePath?.endsWith('.pptx'), 'structuredContent should include the file path');
 
 	await client.close();
 });
