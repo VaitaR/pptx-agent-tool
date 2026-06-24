@@ -1,0 +1,7 @@
+node_modules/
+dist/
+output/
+*.pptx
+*.manifest.json
+.DS_Store
+*.log

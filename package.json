@@ -1,0 +1,64 @@
+{
+  "name": "pptx-agent-tool",
+  "version": "0.1.0",
+  "description": "Standalone AI agent tool for generating PowerPoint presentations with a bundled deckgen renderer",
+  "type": "module",
+  "license": "Apache-2.0",
+  "keywords": [
+    "pptx",
+    "powerpoint",
+    "presentation",
+    "slides",
+    "deck",
+    "pptxgenjs",
+    "ai-agent",
+    "llm-tool",
+    "deckgen"
+  ],
+  "author": "Andrey Shivalin <andrey.shivalin@gmail.com> (https://github.com/VaitaR)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VaitaR/pptx-agent-tool.git"
+  },
+  "homepage": "https://github.com/VaitaR/pptx-agent-tool#readme",
+  "bugs": {
+    "url": "https://github.com/VaitaR/pptx-agent-tool/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "deckgen": "./bin/deckgen"
+  },
+  "files": [
+    "dist",
+    "renderer",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepare": "tsc",
+    "demo": "tsx examples/demo.ts",
+    "typecheck:renderer": "tsc --noEmit -p tsconfig.renderer.json",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "pptxgenjs": "^3.12.0",
+    "tsx": "^4.20.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
